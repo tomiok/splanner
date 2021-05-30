@@ -10,18 +10,20 @@ type jobHandler struct {
 }
 
 func (j *jobHandler) JobHandler(ctx *fiber.Ctx) error {
-	payload := Payload{S: ctx.Get("q", "default")}
-	job := Job{P: payload}
-	jobQueue <- job
-	return nil
+	payload := Payload{Name: ctx.Get("q", "default")}
+	job := Job{Payload: payload}
+	sp := Unit{job: job.Payload.Run}
+	jobQueue <- sp
+	_, err := ctx.Write([]byte("job " + job.Payload.Name + " done"))
+	return err
 }
 
 type Job struct {
-	P Payload
+	Payload Payload
 }
 
 type Payload struct {
-	S string `json:"s"`
+	Name string `json:"name"`
 }
 
 func (p *Payload) Run() {
