@@ -1,19 +1,19 @@
-package main
+package splanner
 
 const (
 	maxQueue   = 10
 	maxWorkers = 5
 )
 
-var jobQueue chan Unit
+var JobQueue chan Unit
 
 type Unit struct {
-	job func()
+	Job        func()
 	jobWithErr func() error
 }
 
-func initQueue() {
-	jobQueue = make(chan Unit, maxQueue)
+func InitQueue() {
+	JobQueue = make(chan Unit, maxQueue)
 }
 
 type dispatcher struct {
@@ -35,14 +35,14 @@ func newWorker(pool chan chan Unit) *worker {
 	}
 }
 
-func (w *worker) start() {
+func (w *worker) Start() {
 	go func() {
 		for {
 			//register the actual worker in the queue
 			w.pool <- w.jobChan
 			select {
 			case job := <-w.jobChan:
-				job.job()
+				job.Job()
 			case <-w.quit:
 				return
 			}
@@ -50,24 +50,24 @@ func (w *worker) start() {
 	}()
 }
 
-// new dispatcher
-func newDispatcher() *dispatcher {
+// NewDispatcher create a pointer to a dispatcher struct
+func NewDispatcher() *dispatcher {
 	return &dispatcher{
 		pool:    make(chan chan Unit, maxWorkers),
 		workers: maxWorkers,
 	}
 }
 
-func (d *dispatcher) run() {
+func (d *dispatcher) Run() {
 	for i := 0; i < d.workers; i++ {
-		worker := newWorker(d.pool)
-		worker.start()
+		w := newWorker(d.pool)
+		w.Start()
 	}
 	go d.dispatch()
 }
 
 func (d *dispatcher) dispatch() {
-	for job := range jobQueue {
+	for job := range JobQueue {
 		go func(j Unit) {
 			jobChannel := <-d.pool
 			jobChannel <- j
