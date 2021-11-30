@@ -12,10 +12,10 @@ func addJobRoute() {
 
 func main() {
 	// init the shared data structure.
-	splanner.InitQueue()
+	splanner.InitQueue(20)
 
 	// init the dispatcher
-	dispatcher := splanner.NewDispatcher()
+	dispatcher := splanner.NewDispatcher(15)
 
 	// the dispatcher is listening
 	dispatcher.Run()

@@ -1,19 +1,15 @@
 package splanner
 
-const (
-	maxQueue   = 10
-	maxWorkers = 5
-)
-
 var JobQueue chan Unit
+var QuitChan chan bool
 
 type Unit struct {
-	Job        func()
-	jobWithErr func() error
+	Job func()
 }
 
-func InitQueue() {
+func InitQueue(maxQueue int) {
 	JobQueue = make(chan Unit, maxQueue)
+	QuitChan = make(chan bool, 1)
 }
 
 type dispatcher struct {
@@ -22,36 +18,33 @@ type dispatcher struct {
 }
 
 type worker struct {
-	pool    chan chan Unit
-	jobChan chan Unit
-	quit    chan bool
+	pool  chan chan Unit
+	jobCh chan Unit
 }
 
 func newWorker(pool chan chan Unit) *worker {
 	return &worker{
-		jobChan: make(chan Unit),
-		quit:    make(chan bool),
-		pool:    pool,
+		jobCh: make(chan Unit),
+		pool:  pool,
 	}
 }
 
 func (w *worker) Start() {
 	go func() {
 		for {
-			//register the actual worker in the queue
-			w.pool <- w.jobChan
+			// register the actual worker in the queue.
+			w.pool <- w.jobCh
 			select {
-			case job := <-w.jobChan:
+			case job := <-w.jobCh:
+				// do the actual job here
 				job.Job()
-			case <-w.quit:
-				return
 			}
 		}
 	}()
 }
 
 // NewDispatcher create a pointer to a dispatcher struct
-func NewDispatcher() *dispatcher {
+func NewDispatcher(maxWorkers int) *dispatcher {
 	return &dispatcher{
 		pool:    make(chan chan Unit, maxWorkers),
 		workers: maxWorkers,
@@ -66,11 +59,28 @@ func (d *dispatcher) Run() {
 	go d.dispatch()
 }
 
-func (d *dispatcher) dispatch() {
+// async
+/*func (d *dispatcher) dispatch() {
 	for job := range JobQueue {
 		go func(j Unit) {
 			jobChannel := <-d.pool
 			jobChannel <- j
 		}(job)
 	}
+	fmt.Println("finished")
+}*/
+
+// not async
+func (d *dispatcher) dispatch() {
+	go func() {
+		for {
+			select {
+			case job, ok := <-JobQueue:
+				if ok {
+					jobChannel := <-d.pool
+					jobChannel <- job
+				}
+			}
+		}
+	}()
 }
