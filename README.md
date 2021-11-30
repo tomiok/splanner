@@ -8,7 +8,7 @@
 
 #### Config
 
-in your main file or something like that
+* In your main file or something like that
 
 ```go
 // init the shared data structure.
@@ -18,6 +18,7 @@ splanner.InitQueue(20)
 splanner.NewDispatcher(15).Run(true)
 ```
 
+* The caller should have something similar...
 ```go
 
 type HeavyWork struct {
