@@ -1,15 +1,15 @@
 package splanner
 
-var JobQueue chan Unit
-var QuitChan chan bool
+import "log"
 
-type Unit struct {
-	Job func()
+var jobQueue chan Unit
+
+type Unit interface {
+	Job() error
 }
 
 func InitQueue(maxQueue int) {
-	JobQueue = make(chan Unit, maxQueue)
-	QuitChan = make(chan bool, 1)
+	jobQueue = make(chan Unit, maxQueue)
 }
 
 type dispatcher struct {
@@ -29,7 +29,8 @@ func newWorker(pool chan chan Unit) *worker {
 	}
 }
 
-func (w *worker) Start() {
+// start, ok worker is working now.
+func (w *worker) start() {
 	go func() {
 		for {
 			// register the actual worker in the queue.
@@ -37,7 +38,11 @@ func (w *worker) Start() {
 			select {
 			case job := <-w.jobCh:
 				// do the actual job here
-				job.Job()
+				err := job.Job()
+
+				if err != nil {
+					log.Println(err.Error())
+				}
 			}
 		}
 	}()
@@ -51,10 +56,11 @@ func NewDispatcher(maxWorkers int) *dispatcher {
 	}
 }
 
+// Run is the starting point. This should be called by the client.
 func (d *dispatcher) Run(async bool) {
 	for i := 0; i < d.workers; i++ {
 		w := newWorker(d.pool)
-		w.Start()
+		w.start()
 	}
 	if async {
 		go d.dispatchAsync()
@@ -63,8 +69,9 @@ func (d *dispatcher) Run(async bool) {
 	}
 }
 
+// dispatchAsync
 func (d *dispatcher) dispatchAsync() {
-	for job := range JobQueue {
+	for job := range jobQueue {
 		go func(j Unit) {
 			jobChannel := <-d.pool
 			jobChannel <- j
@@ -72,12 +79,12 @@ func (d *dispatcher) dispatchAsync() {
 	}
 }
 
-// not async
+// dispatch not async
 func (d *dispatcher) dispatch() {
 	go func() {
 		for {
 			select {
-			case job, ok := <-JobQueue:
+			case job, ok := <-jobQueue:
 				if ok {
 					jobChannel := <-d.pool
 					jobChannel <- job
@@ -85,4 +92,8 @@ func (d *dispatcher) dispatch() {
 			}
 		}
 	}()
+}
+
+func AddUnit(u Unit) {
+	jobQueue <- u
 }

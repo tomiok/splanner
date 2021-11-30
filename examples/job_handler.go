@@ -17,24 +17,19 @@ func JobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for a := 0; a < 100; a++ {
-		payload := Payload{Name: q, number: a}
-		job := Job{Payload: payload}
-		workUnit := splanner.Unit{Job: job.Payload.Run}
-		splanner.JobQueue <- workUnit
-		_, _ = w.Write([]byte(fmt.Sprintf("job %s %d done", payload.Name, a)))
+		work := HeavyWork{Name: q, number: a}
+		splanner.AddUnit(&work)
+		_, _ = w.Write([]byte(fmt.Sprintf("job %s %d done", work.Name, a)))
 	}
 }
 
-type Job struct {
-	Payload Payload
-}
-
-type Payload struct {
+type HeavyWork struct {
 	Name   string `json:"name"`
 	number int
 }
 
-func (p *Payload) Run() {
+func (p *HeavyWork) Job() error {
 	time.Sleep(500 * time.Millisecond)
 	fmt.Println(fmt.Sprintf("heavy job is running %d", p.number))
+	return nil
 }
