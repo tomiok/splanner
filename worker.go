@@ -51,24 +51,26 @@ func NewDispatcher(maxWorkers int) *dispatcher {
 	}
 }
 
-func (d *dispatcher) Run() {
+func (d *dispatcher) Run(async bool) {
 	for i := 0; i < d.workers; i++ {
 		w := newWorker(d.pool)
 		w.Start()
 	}
-	go d.dispatch()
+	if async {
+		go d.dispatchAsync()
+	} else {
+		go d.dispatch()
+	}
 }
 
-// async
-/*func (d *dispatcher) dispatch() {
+func (d *dispatcher) dispatchAsync() {
 	for job := range JobQueue {
 		go func(j Unit) {
 			jobChannel := <-d.pool
 			jobChannel <- j
 		}(job)
 	}
-	fmt.Println("finished")
-}*/
+}
 
 // not async
 func (d *dispatcher) dispatch() {

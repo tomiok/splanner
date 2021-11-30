@@ -14,11 +14,8 @@ func main() {
 	// init the shared data structure.
 	splanner.InitQueue(20)
 
-	// init the dispatcher
-	dispatcher := splanner.NewDispatcher(15)
-
-	// the dispatcher is listening
-	dispatcher.Run()
+	// init the dispatcher & keep it listening.
+	splanner.NewDispatcher(15).Run(true)
 
 	s := http.Server{}
 	s.Addr = ":8080"
